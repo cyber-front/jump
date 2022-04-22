@@ -225,7 +225,7 @@ def validate_method(config: dict) -> SearchMethod:
     return (
         SearchMethod.DEPTH_FIRST
         if "method" not in config
-        else SearchMethod[config["method"]]
+        else SearchMethod[config["method"].upper()]
     )
 
 
@@ -355,15 +355,6 @@ def from_dict(config: dict, path: str = "./") -> Config:
     start = validate_start(config=config, node_count=board.nodes)
     finish = validate_finish(config=config, node_count=board.nodes)
     final_count = validate_final_count(config=config, node_count=board.nodes)
-
-    print(f"description: {description}")
-    print(f"board: {board}")
-    print(f"layout: {layout}")
-    print(f"scope: {scope}")
-    print(f"method: {method}")
-    print(f"start: {start}")
-    print(f"finish: {finish}")
-    print(f"final_count: {final_count}")
 
     if finish is not None and final_count is not None and len(finish) != final_count:
         raise excp.PuzzleException(
