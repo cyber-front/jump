@@ -15,6 +15,15 @@ The program in this project reads a set of files which defines the adjacency gra
 
 There are three files needed to define the board (well, really just two; the third is to support visualization, but I haven't done anything with visualization yet).
 
+### Usage ###
+usage: jump.py [-h] --file FILE
+
+A General Peg Jump Game Solver
+
+optional arguments:
+  -h, --help   show this help message and exit
+  --file FILE  JSON formatted file containing the peg jump game configuration
+
 ### Configuration JSON file ###
 
 The main configuration is contained in a JSON file (Note to self... maybe allow defining in either JSON or YAML).  A sample JSON file is provided in [cracker_standard.json](resources/cracker_standard.json).  THe JSON file may contain the following fields (some of which are optional):
@@ -49,5 +58,8 @@ The board CSV file specifies the adjacency graph of the board.  Its rows refer t
 ### Layout CSV File ###
 The layout CSV file specifies the physical layout of the holes in the board.  This is for rendering purposes, and so is not currently used.  You can use whatever offset or scaling you like, as long as the positions are proportional to the locations you want on the display.  The program will compute the minimum enclosing circle of the points and then translate and scale the points so they are all positioned within the unit circle after reading them from the file.  A sample layout for the Cracker Barrel board is given in [cracker_layout.csv](resources/cracker_layout.csv)
 
+
+
 ### Results ###
 Currently, the program produces the solutions found, along with an indication of the number of solutions found.
+
