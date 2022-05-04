@@ -45,7 +45,7 @@ class TestSolver(unittest.TestCase):
 
         locations = {0, 1}
 
-        next = solver.moves(state=locations, board=board0)
+        next = solver.moves(start_state=locations, board=board0)
 
         self.assertEqual(len(next), 1)
         self.assertEqual(len(next[0]), 1)
@@ -65,7 +65,7 @@ class TestSolver(unittest.TestCase):
 
         locations = {0, 1}
 
-        next = solver.moves(state=locations, board=board1)
+        next = solver.moves(start_state=locations, board=board1)
 
         self.assertEqual(len(next), 2)
         self.assertEqual(len(next[0]), 1)

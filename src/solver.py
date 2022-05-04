@@ -24,12 +24,11 @@ import functools as ft
 import typing
 import board
 import config
-
-""" Desciption of the state of a board with elements in the set corresponding to peg locations on the board """
-State = typing.Set[int]
+import step
+import move
 
 """ Sequence of states intended to define a solution path from the start to an ending state once discovered """
-Path = typing.List[State]
+Path = typing.List[step.Step]
 
 """ Collection of paths which satisfy the ending condition from the starting state """
 PathList = typing.List[Path]
@@ -41,7 +40,7 @@ Picker = typing.Callable[[PathList], typing.Tuple[Path, PathList]]
 Checker = typing.Callable[[Path], bool]
 
 
-def moves(state: typing.Set[int], board: board.Board) -> Path:
+def moves(start_state: step.State, board: board.Board) -> Path:
     """
     Given a board position and topology, computer the list of possible legal
     moves which can be made.  If it returns the empty list, no moves are possible
@@ -51,24 +50,36 @@ def moves(state: typing.Set[int], board: board.Board) -> Path:
     :return: List of legal next steps given the board and the current position of the game pieces
     """
     move_list = []
-    for location in state:
-        transits0 = board.transitions[location]
-        for dir, node in transits0.items():
-            if node not in state:
+    for move_loc in start_state:
+        transits0 = board.transitions[move_loc]
+        for dir, jump_loc in transits0.items():
+            if jump_loc not in start_state:
                 continue
-            transits1 = board.transitions[node]
+            transits1 = board.transitions[jump_loc]
             if dir not in transits1:
                 continue
-            if transits1[dir] in state:
+            rest_loc = transits1[dir]
+            if rest_loc in start_state:
                 continue
 
-            next_state = state.copy()
-            next_state.remove(location)
-            next_state.remove(node)
-            next_state.add(transits1[dir])
+            transition = move.Move(
+                move_loc=move_loc,
+                jump_loc=jump_loc,
+                rest_loc=rest_loc
+            )
 
-            if next_state not in move_list:
-                move_list.append(next_state)
+            final_state = start_state.copy()
+            final_state.remove(transition.move_loc)
+            final_state.remove(transition.jump_loc)
+            final_state.add(transition.rest_loc)
+
+            st = step.Step(
+                start_state=start_state,
+                transition=transition,
+                final_state=final_state
+            )
+            if final_state not in move_list:
+                move_list.append(final_state)
 
     return move_list
 
@@ -108,7 +119,7 @@ def next_paths(path: Path, board: board.Board) -> PathList:
     :return: Collection of paths subsequent to the given path
     """
     paths = []
-    for next_state in moves(state=path[-1], board=board):
+    for next_state in moves(start_state=path[-1], board=board):
         next_path = path.copy()
         next_path.append(next_state)
         paths.append(next_path)
@@ -137,7 +148,7 @@ def check_solution_count(path: Path, board: board.Board, final_count: int) -> bo
     :param final_count: Number of pegs in the target solution without any additional legal moves
     :return: True if the path leads to one of the desired final states
     """
-    return len(path[-1]) == final_count and len(moves(state=path[-1], board=board)) == 0
+    return len(path[-1]) == final_count and len(moves(start_state=path[-1], board=board)) == 0
 
 
 def solve_executive(
