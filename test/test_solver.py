@@ -22,36 +22,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import functools
 import sys
+import logging
+import unittest
+import functools as ft
+import typing as ty
 
 sys.path.append("../src")
 
-import unittest
-import solver
 import board
-import functools as ft
-import config
+import solver
+import enumerations as en
 
 
 class TestSolver(unittest.TestCase):
-    def test_next(self) -> None:
-        board0 = board.Board(
+    def test_moves_00(self) -> None:
+        bd = board.Board(
             transitions={0: {0: 1, 1: 2}, 1: {0: 2, 1: 0}, 2: {0: 0, 1: 1}},
             nodes=3,
             edges=6,
             directions=2,
         )
 
-        locations = {0, 1}
+        next = bd.moves(start_state={0, 1})
 
-        next = solver.moves(state=locations, board=board0)
+        logging.info(f"TestSolver.test_next - next: {next}")
 
-        self.assertEqual(len(next), 1)
-        self.assertEqual(len(next[0]), 1)
-        self.assertEqual(next[0], {2})
+        self.assertEqual(len(next), 2)
+        self.assertEqual(len(next[0].final_state), 1)
+        self.assertEqual(next[0].final_state, {2})
+        self.assertEqual(len(next[1].final_state), 1)
+        self.assertEqual(next[1].final_state, {2})
 
-        board1 = board.Board(
+    def test_moves_01(self) -> None:
+        bd = board.Board(
             transitions={
                 0: {0: 1, 1: 3},
                 1: {0: 2, 1: 0},
@@ -63,16 +67,16 @@ class TestSolver(unittest.TestCase):
             directions=2,
         )
 
-        locations = {0, 1}
+        next = bd.moves(start_state={0, 1})
 
-        next = solver.moves(state=locations, board=board1)
+        logging.info(f"TestSolver.test_next - next: {next}")
 
         self.assertEqual(len(next), 2)
-        self.assertEqual(len(next[0]), 1)
-        self.assertEqual(len(next[1]), 1)
-        self.assertNotEqual(next[0], next[1])
-        self.assertNotEqual(2 in next[0], 2 in next[1])
-        self.assertNotEqual(3 in next[0], 3 in next[1])
+        self.assertEqual(len(next[0].final_state), 1)
+        self.assertEqual(len(next[1].final_state), 1)
+        self.assertNotEqual(next[0].final_state, next[1].final_state)
+        self.assertNotEqual(2 in next[0].final_state, 2 in next[1].final_state)
+        self.assertNotEqual(3 in next[0].final_state, 3 in next[1].final_state)
 
     def test_depth_first(self) -> None:
         path = [{0, 1, 2}, {0, 2, 3}, {4, 5, 6}]
@@ -92,23 +96,9 @@ class TestSolver(unittest.TestCase):
         for idx in range(len(remaining)):
             self.assertEqual(remaining[idx], path[idx + 1])
 
-    def test_next_paths(self) -> None:
-        board0 = board.Board(
-            transitions={0: {0: 1, 1: 2}, 1: {0: 2, 1: 0}, 2: {0: 0, 1: 1}},
-            nodes=3,
-            edges=6,
-            directions=2,
-        )
-
-        locations = {0, 1}
-
-        moves0 = solver.next_paths(path=[locations], board=board0)
-        self.assertEqual(len(moves0), 1)
-        self.assertEqual(len(moves0[0]), 2)
-        self.assertEqual(moves0[0][0], {0, 1})
-        self.assertEqual(moves0[0][1], {2})
-
-        board1 = board.Board(
+    def test_next_paths_00(self) -> None:
+        logging.info("TestSolver.test_next_paths_000")
+        bd = board.Board(
             transitions={
                 0: {0: 1, 1: 3},
                 1: {0: 2, 1: 0},
@@ -120,34 +110,27 @@ class TestSolver(unittest.TestCase):
             directions=2,
         )
 
-        moves1 = solver.next_paths(path=[locations], board=board1)
-        self.assertEqual(len(moves1), 2)
+        path_starts = [[x] for x in bd.moves(start_state={0, 1, 2})]
+        logging.debug(f"\t path_starts: {path_starts}")
 
-        results = {2, 3}
+        for start in path_starts:
+            logging.debug(f"\t TestSolver.test_next_paths_000 loop start ****")
+            logging.debug(f"\t start: {start}")
+            moves = bd.next_paths(path=start)
+            logging.debug(f"\t moves: {len(moves)} / {moves}")
+            logging.debug(f"\t moves[0]: {len(moves[0])} / {moves[0]}")
+            logging.debug(f"\t moves[1]: {len(moves[1])} / {moves[1]}")
 
-        for move in moves1:
-            self.assertEqual(len(move), 2)
-            self.assertEqual(move[0], {0, 1})
-            self.assertEqual(len(move[1]), 1)
-            val = list(move[1])[0]
-            self.assertTrue(val in results)
-            results.remove(val)
+            self.assertEqual(len(moves), 2)
+            self.assertEqual(len(moves[0]), 2)
+            fs0 = moves[0][-1].final_state
+            fs1 = moves[1][-1].final_state
+            self.assertEqual(len(fs0), len(fs1))
+            self.assertEqual(len(fs0.intersection(fs1)), 0)
 
-    def test_solution_checkers(self) -> None:
-        board0 = board.Board(
-            transitions={0: {0: 1, 1: 2}, 1: {0: 2, 1: 0}, 2: {0: 0, 1: 1}},
-            nodes=3,
-            edges=6,
-            directions=2,
-        )
-
-        state0 = {0, 1}
-        finish0 = {2}
-
-        moves0 = solver.next_paths(path=[state0], board=board0)
-        self.assertTrue(solver.check_solution_state(path=moves0[0], finish=finish0))
-
-        board1 = board.Board(
+    def test_next_paths_01(self) -> None:
+        logging.info("TestSolver.test_next_paths_001")
+        bd = board.Board(
             transitions={
                 0: {0: 1, 1: 3},
                 1: {0: 2, 1: 0},
@@ -159,15 +142,554 @@ class TestSolver(unittest.TestCase):
             directions=2,
         )
 
-        state1 = {0, 1}
-        finish1 = {2}
-        moves1 = solver.next_paths(path=[state1], board=board1)
-        self.assertNotEqual(
-            solver.check_solution_state(path=moves1[0], finish=finish1),
-            solver.check_solution_state(path=moves1[1], finish=finish1),
+        path_starts = [[x] for x in bd.moves(start_state={0, 1, 3})]
+        logging.debug(f"\t path_starts: {path_starts}")
+
+        for start in path_starts:
+            logging.debug(f"\t TestSolver.test_next_paths_001 loop start ****")
+            logging.debug(f"\t start: {start}")
+            moves = bd.next_paths(path=start)
+            logging.debug(f"\t moves: {len(moves)} / {moves}")
+            logging.debug(f"\t moves[0]: {len(moves[0])} / {moves[0]}")
+            logging.debug(f"\t moves[1]: {len(moves[1])} / {moves[1]}")
+
+            self.assertEqual(len(moves), 2)
+            self.assertEqual(len(moves[0]), 2)
+            fs0 = moves[0][-1].final_state
+            fs1 = moves[1][-1].final_state
+            self.assertEqual(len(fs0), len(fs1))
+            self.assertEqual(len(fs0.intersection(fs1)), 0)
+
+    def check_counts(
+        self, state: board.StepList, bd: board.Board, checks: ty.Dict[int, bool]
+    ) -> None:
+        for i, exp in checks.items():
+            actual = solver.check_solution_count(path=state, board=bd, final_count=i)
+            self.assertEqual(actual, exp)
+
+    def test_solution_checkers_00(self) -> None:
+        logging.info(f"test_solution_checkers_00")
+        bd = board.Board(
+            transitions={0: {0: 1, 1: 2}, 1: {0: 2, 1: 0}, 2: {0: 0, 1: 1}},
+            nodes=3,
+            edges=6,
+            directions=2,
         )
 
-        board2 = board.Board(
+        starts = bd.moves(start_state={0, 1})
+        logging.debug(f"\t starts: {starts}")
+
+        self.assertEqual(len(starts), 2)
+
+        expectations = {0: False, 1: True, 2: False, 3: False}
+        for state in starts:
+            self.check_counts(state=[state], bd=bd, checks=expectations)
+
+    def test_solution_checkers_01(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        starts = bd.moves(start_state={0, 1})
+        self.assertEqual(len(starts), 2)
+        soln00 = (solver.check_solution_state(path=[starts[0]], finish={2}),)
+        soln01 = (solver.check_solution_state(path=[starts[1]], finish={2}),)
+        soln10 = (solver.check_solution_state(path=[starts[0]], finish={3}),)
+        soln11 = (solver.check_solution_state(path=[starts[1]], finish={3}),)
+
+        self.assertNotEqual(soln00, soln01)
+        self.assertNotEqual(soln10, soln11)
+
+        self.assertNotEqual(soln00, soln10)
+        self.assertNotEqual(soln01, soln11)
+
+        self.assertEqual(soln00, soln11)
+        self.assertEqual(soln01, soln10)
+
+        expectations = {0: False, 1: True, 2: False, 3: False}
+
+        for state in starts:
+            self.check_counts(state=[state], bd=bd, checks=expectations)
+
+    def test_solution_checkers_02(self) -> None:
+        logging.info("TestSolver.test_solution_checkers_02")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
+        )
+        logging.debug(f"\t bd: {bd}")
+
+        starts = bd.moves(start_state={0, 1, 3})
+        logging.debug(f"\t starts: {starts}")
+
+        moves = bd.next_paths(path=starts)
+        logging.debug(f"\t moves: {moves}")
+
+        expectations = {0: False, 1: True, 2: False, 3: False}
+        logging.debug(f"\t expectations: {expectations}")
+
+        for state in moves:
+            self.check_counts(state=state, bd=bd, checks=expectations)
+
+    def test_solution_checkers_03(self) -> None:
+        logging.info("TestSolver.test_solution_checkers_02")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
+        )
+        logging.debug(f"\t bd: {bd}")
+
+        starts = bd.moves(start_state={0, 1, 2})
+        logging.debug(f"\t starts: {starts}")
+
+        expectations = {0: False, 1: False, 2: True, 3: False}
+        logging.debug(f"\t expectations: {expectations}")
+
+        for state in starts:
+            self.check_counts(state=[state], bd=bd, checks=expectations)
+
+    def test_executive_00(self) -> None:
+        logging.info("TestSolver.test_executive_00")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 2},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 1},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=len(state),
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_01(self) -> None:
+        logging.info("TestSolver.test_executive_01")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 1},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 1},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=len(state),
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_02(self) -> None:
+        logging.info("TestSolver.test_executive_02")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 2},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 1},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=len(state),
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_03(self) -> None:
+        logging.info("TestSolver.test_executive_03")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 1},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 1},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=len(state),
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_04(self) -> None:
+        logging.info("TestSolver.test_executive_04")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 4},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=state,
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_05(self) -> None:
+        logging.info("TestSolver.test_executive_05")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 1},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=state,
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_06(self) -> None:
+        logging.info("TestSolver.test_executive_06")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 4},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=state,
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_07(self) -> None:
+        logging.info("TestSolver.test_executive_07")
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 3},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 0, 1: 2},
+            },
+            nodes=4,
+            edges=8,
+            directions=2,
+        )
+
+        start = {0, 1, 2}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 1},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=state,
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_10(self) -> None:
+        bd = board.Board(
             transitions={
                 0: {0: 1, 1: 4},
                 1: {0: 2, 1: 0},
@@ -180,244 +702,481 @@ class TestSolver(unittest.TestCase):
             directions=2,
         )
 
-        state2 = {0, 1, 3}
-        moves2 = solver.next_paths(path=[state2], board=board2)
-        self.assertFalse(
-            solver.check_solution_count(path=moves2[0], board=board2, final_count=2)
-        )
-        self.assertFalse(
-            solver.check_solution_count(path=moves2[0], board=board2, final_count=3)
-        )
-        self.assertFalse(
-            solver.check_solution_count(path=moves1[0], board=board1, final_count=2)
-        )
-        self.assertTrue(
-            solver.check_solution_count(path=moves1[0], board=board1, final_count=1)
-        )
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 1},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {4}, "count": 1},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 0},
+            {"state": {0, 4}, "count": 0},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {1, 4}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {2, 4}, "count": 0},
+            {"state": {3, 4}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 1, 4}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {0, 2, 4}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+            {"state": {1, 2, 4}, "count": 0},
+            {"state": {2, 3, 4}, "count": 0},
+            {"state": {0, 1, 2, 3}, "count": 0},
+            {"state": {0, 1, 2, 4}, "count": 0},
+            {"state": {0, 1, 3, 4}, "count": 0},
+            {"state": {0, 2, 3, 4}, "count": 0},
+            {"state": {1, 2, 3, 4}, "count": 0},
+        ]
 
-    def test_executive_0(self) -> None:
-        brd = board.Board(
-            transitions={0: {0: 1, 1: 2}, 1: {0: 2, 1: 0}, 2: {0: 0, 1: 1}},
-            nodes=3,
-            edges=6,
-            directions=2,
-        )
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
 
-        start = {0, 1}
-        finish = {2}
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
 
-        checker_a = ft.partial(solver.check_solution_state, finish=finish)
-        solutions_a_bf_mul = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_bf_mul), 1)
-        self.assertEqual(solutions_a_bf_mul[0][-1], finish)
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=len(state),
+            )
 
-        solutions_a_bf_sing = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_bf_sing), 1)
-        self.assertEqual(solutions_a_bf_sing[0][-1], finish)
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
 
-        solutions_a_df_mul = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_depth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_df_mul), 1)
-        self.assertEqual(solutions_a_df_mul[0][-1], finish)
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
 
-        solutions_a_df_sing = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_depth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_df_sing), 1)
-        self.assertEqual(solutions_a_df_sing[0][-1], finish)
-
-        checker_b = ft.partial(
-            solver.check_solution_count, board=brd, final_count=len(finish)
-        )
-
-        solutions_b_bf_mul = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_bf_mul), 1)
-        self.assertEqual(solutions_b_bf_mul[0][-1], finish)
-
-        solutions_b_bf_sing = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_bf_sing), 1)
-        self.assertEqual(solutions_b_bf_sing[0][-1], finish)
-
-        solutions_b_df_mul = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_depth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_df_mul), 1)
-        self.assertEqual(solutions_b_df_mul[0][-1], finish)
-
-        solutions_b_df_sing = solver.solve_executive(
-            board=brd,
-            start=start,
-            picker=solver.pick_next_depth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_df_sing), 1)
-        self.assertEqual(solutions_b_df_sing[0][-1], finish)
-
-    def test_executive_1(self) -> None:
-        brd = board.Board(
+    def test_executive_11(self) -> None:
+        bd = board.Board(
             transitions={
-                0: {0: 1, 1: 3},
+                0: {0: 1, 1: 4},
                 1: {0: 2, 1: 0},
                 2: {0: 3, 1: 1},
-                3: {0: 0, 1: 2},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
             },
-            nodes=4,
-            edges=8,
+            nodes=5,
+            edges=10,
             directions=2,
         )
 
-        state = {0, 1, 3}
-        finish = {1}
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 1},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {4}, "count": 1},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 0},
+            {"state": {0, 4}, "count": 0},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {1, 4}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {2, 4}, "count": 0},
+            {"state": {3, 4}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 1, 4}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {0, 2, 4}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+            {"state": {1, 2, 4}, "count": 0},
+            {"state": {2, 3, 4}, "count": 0},
+            {"state": {0, 1, 2, 3}, "count": 0},
+            {"state": {0, 1, 2, 4}, "count": 0},
+            {"state": {0, 1, 3, 4}, "count": 0},
+            {"state": {0, 2, 3, 4}, "count": 0},
+            {"state": {1, 2, 3, 4}, "count": 0},
+        ]
 
-        checker_a = ft.partial(solver.check_solution_state, finish=finish)
-        solutions_a_bf_mul = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_bf_mul), 1)
-        self.assertEqual(solutions_a_bf_mul[0][-1], finish)
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
 
-        solutions_a_bf_sing = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_bf_sing), 1)
-        self.assertEqual(solutions_a_bf_sing[0][-1], finish)
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
 
-        solutions_a_df_mul = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_depth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_df_mul), 1)
-        self.assertEqual(solutions_a_df_mul[0][-1], finish)
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=len(state),
+            )
 
-        solutions_a_df_sing = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_depth_first,
-            checker=checker_a,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_a_df_sing), 1)
-        self.assertEqual(solutions_a_df_sing[0][-1], finish)
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
 
-        checker_b = ft.partial(
-            solver.check_solution_count, board=brd, final_count=len(finish)
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_12(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
         )
 
-        solutions_b_bf_mul = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_bf_mul), 4)
-        for solution in solutions_b_bf_mul:
-            self.assertEqual(len(solution), 3)
-            self.assertEqual(len(solution[2]), 1)
-            self.assertTrue(list(solution[2])[0] in {0, 1, 3})
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 1},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {4}, "count": 1},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 0},
+            {"state": {0, 4}, "count": 0},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {1, 4}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {2, 4}, "count": 0},
+            {"state": {3, 4}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 1, 4}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {0, 2, 4}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+            {"state": {1, 2, 4}, "count": 0},
+            {"state": {2, 3, 4}, "count": 0},
+            {"state": {0, 1, 2, 3}, "count": 0},
+            {"state": {0, 1, 2, 4}, "count": 0},
+            {"state": {0, 1, 3, 4}, "count": 0},
+            {"state": {0, 2, 3, 4}, "count": 0},
+            {"state": {1, 2, 3, 4}, "count": 0},
+        ]
 
-        solutions_b_bf_sing = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_breadth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_bf_sing), 1)
-        self.assertEqual(len(solutions_b_bf_sing[0]), 3)
-        self.assertEqual(len(solutions_b_bf_sing[0][2]), 1)
-        self.assertTrue(list(solutions_b_bf_sing[0][2])[0] in {0, 1, 3})
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
 
-        solutions_b_df_mul = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_depth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.MULTIPLE,
-            min_pegs=len(finish),
-        )
-        self.assertTrue(len(solutions_b_df_mul), 4)
-        for solution in solutions_b_df_mul:
-            self.assertEqual(len(solution), 3)
-            self.assertEqual(len(solution[2]), 1)
-            self.assertTrue(list(solution[2])[0] in {0, 1, 3})
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
 
-        solutions_b_df_sing = solver.solve_executive(
-            board=brd,
-            start=state,
-            picker=solver.pick_next_depth_first,
-            checker=checker_b,
-            scope=config.SolutionScope.SINGLE,
-            min_pegs=len(finish),
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=len(state),
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_13(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
         )
-        self.assertTrue(len(solutions_b_df_sing), 1)
-        self.assertEqual(len(solutions_b_df_sing[0]), 3)
-        self.assertEqual(len(solutions_b_df_sing[0][2]), 1)
-        self.assertTrue(list(solutions_b_df_sing[0][2])[0] in {0, 1, 3})
+
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": {0}, "count": 1},
+            {"state": {1}, "count": 1},
+            {"state": {2}, "count": 1},
+            {"state": {3}, "count": 0},
+            {"state": {4}, "count": 1},
+            {"state": {0, 1}, "count": 0},
+            {"state": {0, 2}, "count": 0},
+            {"state": {0, 3}, "count": 0},
+            {"state": {0, 4}, "count": 0},
+            {"state": {1, 2}, "count": 0},
+            {"state": {1, 3}, "count": 0},
+            {"state": {1, 4}, "count": 0},
+            {"state": {2, 3}, "count": 1},
+            {"state": {2, 4}, "count": 0},
+            {"state": {3, 4}, "count": 1},
+            {"state": {0, 1, 2}, "count": 0},
+            {"state": {0, 1, 3}, "count": 0},
+            {"state": {0, 1, 4}, "count": 0},
+            {"state": {0, 2, 3}, "count": 0},
+            {"state": {0, 2, 4}, "count": 0},
+            {"state": {1, 2, 3}, "count": 0},
+            {"state": {1, 2, 4}, "count": 0},
+            {"state": {2, 3, 4}, "count": 0},
+            {"state": {0, 1, 2, 3}, "count": 0},
+            {"state": {0, 1, 2, 4}, "count": 0},
+            {"state": {0, 1, 3, 4}, "count": 0},
+            {"state": {0, 2, 3, 4}, "count": 0},
+            {"state": {1, 2, 3, 4}, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+
+            checker = ft.partial(solver.check_solution_state, finish=state)
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=len(state),
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(solution[-1].final_state, state)
+
+    def test_executive_14(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
+        )
+
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 4},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+            {"state": 4, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=state,
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_15(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
+        )
+
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 1},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+            {"state": 4, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_breadth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=state,
+            )
+
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_16(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
+        )
+
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 4},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+            {"state": 4, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.MULTIPLE,
+                min_pegs=state,
+            )
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
+
+    def test_executive_16(self) -> None:
+        bd = board.Board(
+            transitions={
+                0: {0: 1, 1: 4},
+                1: {0: 2, 1: 0},
+                2: {0: 3, 1: 1},
+                3: {0: 4, 1: 2},
+                4: {0: 0, 1: 3},
+            },
+            nodes=5,
+            edges=10,
+            directions=2,
+        )
+
+        start = {0, 1, 3}
+        test_cases = [
+            {"state": 0, "count": 0},
+            {"state": 1, "count": 1},
+            {"state": 2, "count": 0},
+            {"state": 3, "count": 0},
+            {"state": 4, "count": 0},
+        ]
+
+        logging.debug(f"\t bd: {bd}")
+        logging.debug(f"\t start: {start}")
+        logging.debug(f"\t test_cases: {test_cases}")
+
+        for test_case in test_cases:
+            state = test_case["state"]
+            count = test_case["count"]
+            logging.debug(f"\t desired: {state}")
+            logging.debug(f"\t solutiosn: {count}")
+
+            checker = ft.partial(
+                solver.check_solution_count, board=bd, final_count=state
+            )
+
+            solutions = bd.solve(
+                start=start,
+                picker=solver.pick_next_depth_first,
+                checker=checker,
+                scope=en.SolutionScope.SINGLE,
+                min_pegs=state,
+            )
+            logging.debug(f"\t solutions: {len(solutions)} / {solutions}")
+
+            self.assertEqual(len(solutions), count)
+            for solution in solutions:
+                self.assertEqual(len(solution[-1].final_state), state)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.WARN,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
     unittest.main()

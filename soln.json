@@ -1,0 +1,66 @@
+[
+    [
+        {
+            "start_state": [
+                0,
+                1,
+                2
+            ],
+            "transition": {
+                "move_loc": 1,
+                "jump_loc": 2,
+                "rest_loc": 3
+            },
+            "final_state": [
+                0,
+                3
+            ]
+        },
+        {
+            "start_state": [
+                0,
+                3
+            ],
+            "transition": {
+                "move_loc": 0,
+                "jump_loc": 3,
+                "rest_loc": 2
+            },
+            "final_state": [
+                2
+            ]
+        }
+    ],
+    [
+        {
+            "start_state": [
+                0,
+                1,
+                2
+            ],
+            "transition": {
+                "move_loc": 1,
+                "jump_loc": 2,
+                "rest_loc": 3
+            },
+            "final_state": [
+                0,
+                3
+            ]
+        },
+        {
+            "start_state": [
+                0,
+                3
+            ],
+            "transition": {
+                "move_loc": 3,
+                "jump_loc": 0,
+                "rest_loc": 1
+            },
+            "final_state": [
+                1
+            ]
+        }
+    ]
+]

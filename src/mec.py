@@ -20,14 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# File: mec.py
+#
+# Description: Finds the minimum enclosing circle of a collection of points.
+
 from dataclasses import dataclass
-import functools as ft
 import math
 import random as rand
 import typing
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Point:
     """
     This class defines a 2D point in the plane Z=0
@@ -157,7 +160,7 @@ def mid_point(p1: Point, p2: Point) -> Point:
     return (p1 + p2) / 2.0
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Circle:
     """
     This class defines a circle of a particular radius with its center

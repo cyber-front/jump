@@ -1,5 +1,3 @@
-#! /bin/python
-
 # MIT License
 
 # Copyright (c) 2022 Cybernetic Frontiers, LLC
@@ -22,53 +20,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# File: jump.py
-#
-# Description: Main executable for the jump program
+
+from dataclasses import dataclass
+import typing
+
+State = typing.Set[int]
 
 
-import argparse as ap
-import logging
-import config as pc
-import solver
-
-
-def get_arguments() -> ap.Namespace:
+@dataclass(frozen=True, slots=True)
+class Step:
     """
-    Read and return the CLI arguments
+    This class defines a transition from one state to another.
 
-    :return: Command line arguments passed to the running app
+    :param start_state: Starting state of the transition
+    :param move: Location of the peg moving
+    :param jump: Location of the peg being jumped
+    :param land: Final location of the peg being moved
+    :param final_state: Final state after completing the transition
     """
-    parser = ap.ArgumentParser(
-        prog="jump", description="A General Peg Jump Game Solver"
-    )
-    parser.add_argument(
-        "--file",
-        type=str,
-        required=True,
-        help="JSON formatted file containing the peg jump game configuration",
-    )
-    return parser.parse_args()
 
+    start_state: State
+    move: int
+    jump: int
+    land: int
+    final_state: State
 
-def main() -> None:
-    """
-    main function
-    """
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-    args = get_arguments()
-    config = pc.config_factory(filename=args.file)
-    logging.debug(f"config = {config}")
-    solutions = solver.solve(cfg=config)
+    def validate(self) -> bool:
+        start_valid = (
+            self.move in self.start_state
+            and self.jump in self.start_state
+            and self.land not in self.start_state
+        )
+        final_valid = (
+            self.move not in self.final_state
+            and self.jump not in self.final_state
+            and self.land in self.final_state
+        )
 
-    for solution in solutions:
-        logging.info(solution)
-
-    logging.info(f"Solutions found {len(solutions)}")
-
-
-if __name__ == "__main__":
-    main()
+        return start_valid and final_valid

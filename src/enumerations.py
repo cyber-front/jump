@@ -1,5 +1,3 @@
-#! /bin/python
-
 # MIT License
 
 # Copyright (c) 2022 Cybernetic Frontiers, LLC
@@ -22,53 +20,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# File: jump.py
+# File: enumerations.py
 #
-# Description: Main executable for the jump program
+# Description: Contains a variety of helper enumeration classes.
+
+import enum
 
 
-import argparse as ap
-import logging
-import config as pc
-import solver
-
-
-def get_arguments() -> ap.Namespace:
+class SearchMethod(enum.Enum):
     """
-    Read and return the CLI arguments
-
-    :return: Command line arguments passed to the running app
+    This class will be used to specify the search algorithm to use
+    to solve the puzzle.
     """
-    parser = ap.ArgumentParser(
-        prog="jump", description="A General Peg Jump Game Solver"
-    )
-    parser.add_argument(
-        "--file",
-        type=str,
-        required=True,
-        help="JSON formatted file containing the peg jump game configuration",
-    )
-    return parser.parse_args()
+
+    DEPTH_FIRST = enum.auto()
+    BREADTH_FIRST = enum.auto()
 
 
-def main() -> None:
+class SolutionScope(enum.Enum):
     """
-    main function
+    This class is used to specify the number of results to return.  SINGLE
+    specifies returning the first solution detected, while MULTIPLE returns all
+    possible solutions.  The MULTIPLE approach can only finde all solutions by
+    performing an exhaustive search, so, it's likely to take longer than
+    finding only the first one and going home with that.
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-    args = get_arguments()
-    config = pc.config_factory(filename=args.file)
-    logging.debug(f"config = {config}")
-    solutions = solver.solve(cfg=config)
 
-    for solution in solutions:
-        logging.info(solution)
-
-    logging.info(f"Solutions found {len(solutions)}")
+    SINGLE = enum.auto()
+    MULTIPLE = enum.auto()
 
 
-if __name__ == "__main__":
-    main()
+class CheckerMethod(enum.Enum):
+    """
+    This class describes how to check for a solution, either by the position of
+    the pegs in the board, or by the number of pegs remaining without the
+    ability to make any additional moves.
+    """
+
+    POSITION = enum.auto()
+    COUNT = enum.auto()

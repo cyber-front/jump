@@ -1,5 +1,3 @@
-#! /bin/python
-
 # MIT License
 
 # Copyright (c) 2022 Cybernetic Frontiers, LLC
@@ -22,53 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# File: jump.py
+# File: move.py
 #
-# Description: Main executable for the jump program
+# Description: Specifies the a particular move.
 
 
-import argparse as ap
-import logging
-import config as pc
-import solver
+from dataclasses import dataclass
 
 
-def get_arguments() -> ap.Namespace:
+@dataclass(frozen=True, slots=True)
+class Move:
     """
-    Read and return the CLI arguments
+    The Move class defines a move in the jump game by specifying the location
+    of the peg being moved, the location of the peg being jumped, and the final
+    location of the peg which is being moved.
 
-    :return: Command line arguments passed to the running app
+    :param move: Location of the peg moving
+    :param jump: Location of the peg being jumped
+    :param land: Final location of the peg being moved
     """
-    parser = ap.ArgumentParser(
-        prog="jump", description="A General Peg Jump Game Solver"
-    )
-    parser.add_argument(
-        "--file",
-        type=str,
-        required=True,
-        help="JSON formatted file containing the peg jump game configuration",
-    )
-    return parser.parse_args()
 
-
-def main() -> None:
-    """
-    main function
-    """
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-    args = get_arguments()
-    config = pc.config_factory(filename=args.file)
-    logging.debug(f"config = {config}")
-    solutions = solver.solve(cfg=config)
-
-    for solution in solutions:
-        logging.info(solution)
-
-    logging.info(f"Solutions found {len(solutions)}")
-
-
-if __name__ == "__main__":
-    main()
+    move: int
+    jump: int
+    land: int
