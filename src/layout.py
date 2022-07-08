@@ -20,6 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# File: layout.py
+#
+# Description: Specifies the physical layout of a board which can be used to
+# render the board and the pegs it contains
+
 from dataclasses import dataclass
 import typing
 import mec
@@ -28,7 +33,7 @@ import os.path as osp
 import pandas as pd
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Layout:
     points: typing.List[mec.Point]
 

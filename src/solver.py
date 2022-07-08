@@ -21,72 +21,17 @@
 # SOFTWARE.
 
 import functools as ft
+import logging
 import typing
 import board
 import config
 import step
-import move
-
-""" Sequence of states intended to define a solution path from the start to an ending state once discovered """
-Path = typing.List[step.Step]
-
-""" Collection of paths which satisfy the ending condition from the starting state """
-PathList = typing.List[Path]
-
-""" A function for picking the next path to test for being the endstate and the remainng states to check """
-Picker = typing.Callable[[PathList], typing.Tuple[Path, PathList]]
-
-""" A function for checking if the final state in the path satisfies the criteria being searched for """
-Checker = typing.Callable[[Path], bool]
-
-
-def moves(start_state: step.State, board: board.Board) -> Path:
-    """
-    Given a board position and topology, computer the list of possible legal
-    moves which can be made.  If it returns the empty list, no moves are possible
-
-    :param state: Location of the pegs in the game board
-    :param board: Board topology
-    :return: List of legal next steps given the board and the current position of the game pieces
-    """
-    move_list = []
-    for move_loc in start_state:
-        transits0 = board.transitions[move_loc]
-        for dir, jump_loc in transits0.items():
-            if jump_loc not in start_state:
-                continue
-            transits1 = board.transitions[jump_loc]
-            if dir not in transits1:
-                continue
-            rest_loc = transits1[dir]
-            if rest_loc in start_state:
-                continue
-
-            transition = move.Move(
-                move_loc=move_loc,
-                jump_loc=jump_loc,
-                rest_loc=rest_loc
-            )
-
-            final_state = start_state.copy()
-            final_state.remove(transition.move_loc)
-            final_state.remove(transition.jump_loc)
-            final_state.add(transition.rest_loc)
-
-            st = step.Step(
-                start_state=start_state,
-                transition=transition,
-                final_state=final_state
-            )
-            if final_state not in move_list:
-                move_list.append(final_state)
-
-    return move_list
+import enumerations as en
 
 
 def pick_next_depth_first(
-    candidates: PathList,
-) -> typing.Tuple[Path, PathList]:
+    candidates: board.PathList,
+) -> typing.Tuple[board.StepList, board.PathList]:
     """
     Pick the next item to search for in a depth first search and return
     the remaining candidates with the one selected removed.
@@ -98,8 +43,8 @@ def pick_next_depth_first(
 
 
 def pick_next_breadth_first(
-    candidates: PathList,
-) -> typing.Tuple[Path, PathList]:
+    candidates: board.PathList,
+) -> typing.Tuple[board.StepList, board.PathList]:
     """
     Pick the next item to search for in a breadth first search and return
     the remaining candidates with the one selected removed.
@@ -110,23 +55,7 @@ def pick_next_breadth_first(
     return candidates[0], candidates[1:]
 
 
-def next_paths(path: Path, board: board.Board) -> PathList:
-    """
-    Compute the next set of paths given a starting path and a board.
-
-    :param path: Starting point to get the next set of paths
-    :param board: Board topology to use for generating next paths
-    :return: Collection of paths subsequent to the given path
-    """
-    paths = []
-    for next_state in moves(start_state=path[-1], board=board):
-        next_path = path.copy()
-        next_path.append(next_state)
-        paths.append(next_path)
-    return paths
-
-
-def check_solution_state(path: Path, finish: State) -> bool:
+def check_solution_state(path: board.StepList, finish: step.State) -> bool:
     """
     Check to see if the path concludes at the finish state and return the path, otherwise
     return None.
@@ -135,10 +64,17 @@ def check_solution_state(path: Path, finish: State) -> bool:
     :param finish: Final state to search for and against which to check the given path
     :return: Path if it concludes at the finish state; None otherwise
     """
-    return path[-1] == finish
+    logging.debug(f"check_solution_state")
+    logging.debug(f"\t path: {path}")
+    logging.debug(f"\t finish: {finish}")
+    logging.debug(f"\t final_state: {path[-1].final_state}")
+
+    return path[-1].final_state == finish
 
 
-def check_solution_count(path: Path, board: board.Board, final_count: int) -> bool:
+def check_solution_count(
+    path: board.StepList, board: board.Board, final_count: int
+) -> bool:
     """
     Check to see if the path concludes with the specified number of pieces remaining on
     the board and that there are no additional legal moves which can be made.
@@ -148,44 +84,19 @@ def check_solution_count(path: Path, board: board.Board, final_count: int) -> bo
     :param final_count: Number of pegs in the target solution without any additional legal moves
     :return: True if the path leads to one of the desired final states
     """
-    return len(path[-1]) == final_count and len(moves(start_state=path[-1], board=board)) == 0
+    final_state = path[-1].final_state
+    subsequent_moves = board.moves(start_state=final_state)
+    logging.debug(f"check_solution_count")
+    logging.debug(f"\t path: {path}")
+    logging.debug(f"\t board: {board}")
+    logging.debug(f"\t final_count: {final_count}")
+    logging.debug(f"\t final_state: {len(final_state)} / {final_state}")
+    logging.debug(f"\t subsequent_moves: {subsequent_moves}")
+
+    return len(final_state) == final_count and len(subsequent_moves) == 0
 
 
-def solve_executive(
-    board: board.Board,
-    start: State,
-    picker: Picker,
-    checker: Checker,
-    scope: config.SolutionScope,
-    min_pegs: int,
-) -> PathList:
-    """
-    This function finds a path of moves from the start state until the check state is satisfied.
-
-    :param board: Board topology to search
-    :param start: Start state to begin search
-    :param picker: Function to separate the next path to examine from the list of paths awaiting examination
-    :param checker: Function to determine if a path satisfies the endstate condition
-    :param scope: Flag used to determine whether to return a single solution or all possible solutions
-    :param min_pegs: Minimum number of pegs in the solution; checked to cull branches which cannot possibly satisfy the endstate condition
-    :return: List of paths, all of which satisfies the intended criteria
-    """
-    candidates = next_paths(path=[start], board=board)
-    solutions = []
-    while len(candidates) > 0:
-        next, candidates = picker(candidates)
-        if len(next[-1]) < min_pegs:
-            continue
-        if checker(path=next):
-            solutions.append(next)
-            if scope == config.SolutionScope.SINGLE:
-                return solutions
-        else:
-            candidates.extend(next_paths(path=next, board=board))
-    return solutions
-
-
-def solve(cfg: config.Config) -> PathList:
+def solve(cfg: config.Config) -> board.PathList:
     """
     Solve a game defined by the elements of the config instance passed
 
@@ -195,32 +106,27 @@ def solve(cfg: config.Config) -> PathList:
 
     # Map from the enum to the function to use to perform the search
     methods = {
-        config.SearchMethod.BREADTH_FIRST: pick_next_breadth_first,
-        config.SearchMethod.DEPTH_FIRST: pick_next_depth_first,
+        en.SearchMethod.BREADTH_FIRST: pick_next_breadth_first,
+        en.SearchMethod.DEPTH_FIRST: pick_next_depth_first,
     }
 
     # Map from the endstate type, to the partial function to use to
     # check if the desired end state has been reached
     checkers = {
-        config.CheckerMethod.COUNT: ft.partial(
+        en.CheckerMethod.COUNT: ft.partial(
             check_solution_count, board=cfg.board, final_count=cfg.final_count
         ),
-        config.CheckerMethod.POSITION: ft.partial(
-            check_solution_state, finish=cfg.finish
-        ),
+        en.CheckerMethod.POSITION: ft.partial(check_solution_state, finish=cfg.finish),
     }
 
     # Number of pegs remaining in the solution to limit the scope
     # of the search when the solution has multiple pegs
     min_pegs = (
-        len(cfg.finish)
-        if cfg.checker == config.CheckerMethod.POSITION
-        else cfg.final_count
+        len(cfg.finish) if cfg.checker == en.CheckerMethod.POSITION else cfg.final_count
     )
 
     # Go solve it
-    return solve_executive(
-        board=cfg.board,
+    return cfg.board.solve(
         start=cfg.start,
         picker=methods[cfg.method],
         checker=checkers[cfg.checker],

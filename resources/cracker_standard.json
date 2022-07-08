@@ -2,7 +2,7 @@
     "description": "Standard Cracker Barrel Peg Jump Game",
     "board": "cracker_board.csv",
     "layout": "cracker_layout.csv",
-    "scope": "MULTIPLE",
+    "scope": "SINGLE",
     "start": [
         1,
         2,
@@ -19,5 +19,7 @@
         13,
         14
     ],
-    "finish": [0]
+    "finish": [
+        0
+    ]
 }

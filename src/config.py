@@ -20,56 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# File: puzzle_config.py
+# File: config.py
 #
 # Description: Specifies the features of the jump puzzle to solve including the starting and desired
-# final state of the puzzle game board.#
+# final state of the puzzle game board.
 
 from dataclasses import dataclass
-import enum
 import os.path as osp
 import typing
 import json
 import board as pb
 import layout as pl
 import exception as excp
+import enumerations as en
 
 
-class SearchMethod(enum.Enum):
-    """
-    This class will be used to specify the search algorithm to use
-    to solve the puzzle.
-    """
-
-    DEPTH_FIRST = enum.auto()
-    BREADTH_FIRST = enum.auto()
-
-
-class SolutionScope(enum.Enum):
-    """
-    This class is used to specify the number of results to return.  SINGLE
-    specifies returning the first solution detected, while MULTIPLE returns all
-    possible solutions.  The MULTIPLE approach can only finde all solutions by
-    performing an exhaustive search, so, it's likely to take longer than
-    finding only the first one and going home with that.
-    """
-
-    SINGLE = enum.auto()
-    MULTIPLE = enum.auto()
-
-
-class CheckerMethod(enum.Enum):
-    """
-    This class describes how to check for a solution, either by the position of
-    the pegs in the board, or by the number of pegs remaining without the
-    ability to make any additional moves.
-    """
-
-    POSITION = enum.auto()
-    COUNT = enum.auto()
-
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Config:
     """
     This class specifies the features to solve a particular jump puzzle.  The final
@@ -94,19 +60,21 @@ class Config:
     board: pb.Board
     layout: pl.Layout
     start: typing.Set[int]
-    method: SearchMethod = SearchMethod.DEPTH_FIRST
-    scope: SolutionScope = SolutionScope.SINGLE
+    method: en.SearchMethod = en.SearchMethod.DEPTH_FIRST
+    scope: en.SolutionScope = en.SolutionScope.SINGLE
     finish: typing.Optional[typing.Set[int]] = None
     final_count: typing.Optional[int] = None
 
     @property
-    def checker(self) -> CheckerMethod:
+    def checker(self) -> en.CheckerMethod:
         """
         This property supplies an enumeration value based on whether the config specifies
         looking for a specific final board layout or a number of pegs remaining without
         the possibility of making any additional moves.
         """
-        return CheckerMethod.COUNT if self.finish is None else CheckerMethod.POSITION
+        return (
+            en.CheckerMethod.COUNT if self.finish is None else en.CheckerMethod.POSITION
+        )
 
 
 def validate_description(config: dict) -> str:
@@ -196,7 +164,7 @@ def validate_board(config: dict, path: str = "./") -> pb.Board:
     return pb.read_board(board_filename)
 
 
-def validate_scope(config: dict) -> SolutionScope:
+def validate_scope(config: dict) -> en.SolutionScope:
     """
     This function extracts the solution scope from the configuraiton dict when it's present and returns
     that value to the calling routine.  If the solution scope isn't specified, a default value is returned.
@@ -217,13 +185,13 @@ def validate_scope(config: dict) -> SolutionScope:
             )
 
     return (
-        SolutionScope.SINGLE
+        en.SolutionScope.SINGLE
         if "scope" not in config
-        else SolutionScope[config["scope"]]
+        else en.SolutionScope[config["scope"]]
     )
 
 
-def validate_method(config: dict) -> SearchMethod:
+def validate_method(config: dict) -> en.SearchMethod:
     """
     This function extracts the search method from the configuraiton dict when it's present and returns
     that value to the calling routine.  If the method isn't specified, a default value is returned.
@@ -245,9 +213,9 @@ def validate_method(config: dict) -> SearchMethod:
             )
 
     return (
-        SearchMethod.DEPTH_FIRST
+        en.SearchMethod.DEPTH_FIRST
         if "method" not in config
-        else SearchMethod[config["method"].upper()]
+        else en.SearchMethod[config["method"].upper()]
     )
 
 

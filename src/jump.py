@@ -22,7 +22,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# File: jump.py
+#
+# Description: Main executable for the jump program
+
+
 import argparse as ap
+import logging
 import config as pc
 import solver
 
@@ -49,15 +55,19 @@ def main() -> None:
     """
     main function
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
     args = get_arguments()
     config = pc.config_factory(filename=args.file)
-    print(f"config = {config}")
+    logging.debug(f"config = {config}")
     solutions = solver.solve(cfg=config)
 
     for solution in solutions:
-        print(solution)
+        logging.info(solution)
 
-    print(f"Solutions found {len(solutions)}")
+    logging.info(f"Solutions found {len(solutions)}")
 
 
 if __name__ == "__main__":

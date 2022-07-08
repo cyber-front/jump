@@ -20,26 +20,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# File: move.py
+# File: enumerations.py
 #
-# Description: Specifies the a particular move.
+# Description: Contains a variety of helper enumeration classes.
+
+import enum
 
 
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True, slots=True)
-class Move:
+class SearchMethod(enum.Enum):
     """
-    The Move class defines a move in the jump game by specifying the location
-    of the peg being moved, the location of the peg being jumped, and the final
-    location of the peg which is being moved.
-
-    :param move: Location of the peg moving
-    :param jump: Location of the peg being jumped
-    :param land: Final location of the peg being moved
+    This class will be used to specify the search algorithm to use
+    to solve the puzzle.
     """
 
-    move: int
-    jump: int
-    land: int
+    DEPTH_FIRST = enum.auto()
+    BREADTH_FIRST = enum.auto()
+
+
+class SolutionScope(enum.Enum):
+    """
+    This class is used to specify the number of results to return.  SINGLE
+    specifies returning the first solution detected, while MULTIPLE returns all
+    possible solutions.  The MULTIPLE approach can only finde all solutions by
+    performing an exhaustive search, so, it's likely to take longer than
+    finding only the first one and going home with that.
+    """
+
+    SINGLE = enum.auto()
+    MULTIPLE = enum.auto()
+
+
+class CheckerMethod(enum.Enum):
+    """
+    This class describes how to check for a solution, either by the position of
+    the pegs in the board, or by the number of pegs remaining without the
+    ability to make any additional moves.
+    """
+
+    POSITION = enum.auto()
+    COUNT = enum.auto()
